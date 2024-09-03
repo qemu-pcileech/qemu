@@ -2011,6 +2011,11 @@ F: qapi/pci.json
 F: docs/pci*
 F: docs/specs/*pci*
 
+PCILeech
+M: Zero Tang <zero.tangptr@gmail.com>
+S: Supported
+F: hw/misc/pcileech.c
+
 PCIE DOE
 M: Huai-Cheng Kuo <hchkuo@avery-design.com.tw>
 M: Chris Browy <cbrowy@avery-design.com>

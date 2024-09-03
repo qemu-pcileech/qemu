@@ -78,17 +78,20 @@ typedef struct PciLeechState PciLeechState;
 
 DECLARE_INSTANCE_CHECKER(PciLeechState, PCILEECH, TYPE_PCILEECH_DEVICE)
 
-static void pci_leech_process_write_request(PciLeechState *state, const uint8_t *buf, int size)
+static void pci_leech_process_write_request(PciLeechState *state,
+                                            const uint8_t *buf, int size)
 {
     const uint64_t address = state->request.address + state->written_length;
     struct LeechResponseHeader response = { 0 };
     MemTxResult result = pci_dma_write(&state->device, address, buf, size);
     if (result != MEMTX_OK) {
-        printf("PCILeech: Address 0x%lX Write Error! MemTxResult: 0x%X\n", address, result);
+        printf("PCILeech: Address 0x%lX Write Error! MemTxResult: 0x%X\n",
+                                    address, result);
     }
     response.result = cpu_to_le32(result);
     response.length = 0;
-    qemu_chr_fe_write_all(&state->chardev, (uint8_t*)&response, sizeof(response));
+    qemu_chr_fe_write_all(&state->chardev, (uint8_t *)&response,
+                            sizeof(response));
     /* Increment written length counter. */
     state->written_length += size;
     /* Check if write-operation is fulfilled. */
@@ -114,17 +117,18 @@ static void pci_leech_process_read_request(PciLeechState *state)
         }
         response.result = cpu_to_le32(result);
         response.length = cpu_to_le64(readlen);
-        qemu_chr_fe_write_all(&state->chardev, (uint8_t*)&response,
+        qemu_chr_fe_write_all(&state->chardev, (uint8_t *)&response,
                             sizeof(struct LeechResponseHeader));
         qemu_chr_fe_write_all(&state->chardev, buff, readlen);
     }
 }
 
-static void pci_leech_chardev_read_handler(void* opaque, const uint8_t *buf, int size)
+static void pci_leech_chardev_read_handler(void *opaque, const uint8_t *buf,
+                                            int size)
 {
-    PciLeechState *state=PCILEECH(opaque);
-    uint8_t* req_buff=(uint8_t*)&state->request;
-    printf("PCILeech: Incoming %u bytes...\n",size);
+    PciLeechState *state = PCILEECH(opaque);
+    uint8_t* req_buff = (uint8_t *)&state->request;
+    printf("PCILeech: Incoming %u bytes...\n", size);
     if (state->write_pending) {
         /* Complete pending write operation.*/
         puts("PCILeech: Dispatching to pending-write handler...");
@@ -132,34 +136,38 @@ static void pci_leech_chardev_read_handler(void* opaque, const uint8_t *buf, int
     } else {
         /* Copy request to internal state. */
         puts("PCILeech: Dispatching to general handler...");
-        memcpy(&req_buff[state->pos],buf,sizeof(struct LeechRequestHeader)-state->pos);
-        state->request.address=le64_to_cpu(state->request.address);
-        state->request.length=le64_to_cpu(state->request.length);
-        state->pos=0;
-        switch(state->request.command) {
-            case PCILEECH_REQUEST_READ:
-                pci_leech_process_read_request(state);
-                break;
-            case PCILEECH_REQUEST_WRITE:
-                /* Set to write-pending state */
-                state->write_pending=true;
-                state->written_length=0;
-                break;
-            default:
-                printf("PCILeech: unknown request command (%u) is received!\n",state->request.command);
-                break;
+        memcpy(&req_buff[state->pos], buf, sizeof(struct LeechRequestHeader) -
+                                                                state->pos);
+        state->request.address = le64_to_cpu(state->request.address);
+        state->request.length = le64_to_cpu(state->request.length);
+        state->pos = 0;
+        switch (state->request.command) {
+        case PCILEECH_REQUEST_READ:
+            pci_leech_process_read_request(state);
+            break;
+        case PCILEECH_REQUEST_WRITE:
+            /* Set to write-pending state */
+            state->write_pending = true;
+            state->written_length = 0;
+            break;
+        default:
+            printf("PCILeech: unknown request command (%u) is received!\n",
+                                                state->request.command);
+            break;
         }
     }
 }
 
-static int pci_leech_chardev_can_read_handler(void* opaque)
+static int pci_leech_chardev_can_read_handler(void *opaque)
 {
     PciLeechState *state = PCILEECH(opaque);
     if (state->write_pending) {
         /* Calculate the remaining pending length to write. */
-        const uint64_t remainder = state->request.length - state->written_length;
+        const uint64_t remainder = state->request.length -
+                                    state->written_length;
         /* Limit receiving buffer to PCILEECH_BUFFER_SIZE. */
-        return (remainder > PCILEECH_BUFFER_SIZE) ? PCILEECH_BUFFER_SIZE : (int)remainder;
+        return (remainder > PCILEECH_BUFFER_SIZE) ? PCILEECH_BUFFER_SIZE :
+                                                        (int)remainder;
     } else {
         /* No pending operations, so let's just receive a request header. */
         return sizeof(struct LeechRequestHeader);
@@ -169,7 +177,10 @@ static int pci_leech_chardev_can_read_handler(void* opaque)
 static void pci_leech_realize(PCIDevice *pdev, Error **errp)
 {
     PciLeechState *state = PCILEECH(pdev);
-    qemu_chr_fe_set_handlers(&state->chardev,pci_leech_chardev_can_read_handler,pci_leech_chardev_read_handler,NULL,NULL,state,NULL,true);
+    qemu_chr_fe_set_handlers(&state->chardev,
+                            pci_leech_chardev_can_read_handler,
+                            pci_leech_chardev_read_handler,
+                            NULL, NULL, state, NULL, true);
 }
 
 static Property leech_properties[] = {
