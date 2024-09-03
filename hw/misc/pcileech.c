@@ -51,6 +51,11 @@ struct LeechRequestHeader {
     uint64_t length;
 };
 
+#define LEECH_RESULT_OK     0
+#define LEECH_DEVICE_ERROR  (1U << 0)
+#define LEECH_DECODE_ERROR  (1U << 1)
+#define LEECH_ACCESS_ERROR  (1U << 2)
+
 struct LeechResponseHeader {
     /* Little-Endian */
     uint32_t result;
@@ -59,8 +64,8 @@ struct LeechResponseHeader {
 };
 
 /* Verify the header length */
-static_assert(sizeof(struct LeechRequestHeader) == 24);
-static_assert(sizeof(struct LeechResponseHeader) == 16);
+QEMU_BUILD_BUG_ON(sizeof(struct LeechRequestHeader) != 24);
+QEMU_BUILD_BUG_ON(sizeof(struct LeechResponseHeader) != 16);
 
 struct PciLeechState {
     /* Internal State */
@@ -74,21 +79,43 @@ struct PciLeechState {
 };
 
 typedef struct LeechRequestHeader LeechRequestHeader;
+typedef struct LeechResponseHeader LeechResponseHeader;
 typedef struct PciLeechState PciLeechState;
 
 DECLARE_INSTANCE_CHECKER(PciLeechState, PCILEECH, TYPE_PCILEECH_DEVICE)
+
+static uint32_t pci_leech_convert_result(MemTxResult result)
+{
+    if (result == MEMTX_OK) {
+        return LEECH_RESULT_OK;
+    } else {
+        uint32_t ret = 0;
+        if (result & MEMTX_ERROR) {
+            ret |= LEECH_DEVICE_ERROR;
+        }
+        if (result & MEMTX_DECODE_ERROR) {
+            ret |= LEECH_DECODE_ERROR;
+        }
+        if (result & MEMTX_ACCESS_ERROR) {
+            ret |= LEECH_ACCESS_ERROR;
+        }
+        return ret;
+    }
+}
 
 static void pci_leech_process_write_request(PciLeechState *state,
                                             const uint8_t *buf, int size)
 {
     const uint64_t address = state->request.address + state->written_length;
     struct LeechResponseHeader response = { 0 };
+    /* Write memory via DMA. */
     MemTxResult result = pci_dma_write(&state->device, address, buf, size);
     if (result != MEMTX_OK) {
-        printf("PCILeech: Address 0x%lX Write Error! MemTxResult: 0x%X\n",
+        printf("PCILeech: Address 0x%016lX Write Error! MemTxResult: 0x%X\n",
                                     address, result);
     }
-    response.result = cpu_to_le32(result);
+    /* Send a response. */
+    response.result = cpu_to_le32(pci_leech_convert_result(result));
     response.length = 0;
     qemu_chr_fe_write_all(&state->chardev, (uint8_t *)&response,
                             sizeof(response));
@@ -109,14 +136,17 @@ static void pci_leech_process_read_request(PciLeechState *state)
         struct LeechResponseHeader response = { 0 };
         const uint64_t readlen = (request->length - i) <= sizeof(buff) ?
                                     (request->length - i) : sizeof(buff);
+        /* Read memory via DMA. */
         MemTxResult result = pci_dma_read(&state->device, request->address + i,
                                                             buff, readlen);
         if (result != MEMTX_OK) {
-            printf("PCILeech: Address 0x%lX Read Error! MemTxResult: 0x%X\n",
+            printf("PCILeech: Address 0x%016lX Read Error! MemTxResult: 0x%X\n",
                     request->address + i, result);
         }
-        response.result = cpu_to_le32(result);
+        /* Flip byte-order to little-endian. */
+        response.result = cpu_to_le32(pci_leech_convert_result(result));
         response.length = cpu_to_le64(readlen);
+        /* Send a header. The data follow after it. */
         qemu_chr_fe_write_all(&state->chardev, (uint8_t *)&response,
                             sizeof(struct LeechResponseHeader));
         qemu_chr_fe_write_all(&state->chardev, buff, readlen);
@@ -128,24 +158,27 @@ static void pci_leech_chardev_read_handler(void *opaque, const uint8_t *buf,
 {
     PciLeechState *state = PCILEECH(opaque);
     uint8_t* req_buff = (uint8_t *)&state->request;
-    printf("PCILeech: Incoming %u bytes...\n", size);
     if (state->write_pending) {
         /* Complete pending write operation.*/
-        puts("PCILeech: Dispatching to pending-write handler...");
+        /* puts("PCILeech: Dispatching to pending-write handler..."); */
         pci_leech_process_write_request(state, buf, size);
     } else {
         /* Copy request to internal state. */
-        puts("PCILeech: Dispatching to general handler...");
+        /* puts("PCILeech: Dispatching to general handler..."); */
         memcpy(&req_buff[state->pos], buf, sizeof(struct LeechRequestHeader) -
                                                                 state->pos);
+        /* Flip byte-order to little-endian. */
         state->request.address = le64_to_cpu(state->request.address);
         state->request.length = le64_to_cpu(state->request.length);
         state->pos = 0;
+        /* Dispatch command. */
         switch (state->request.command) {
         case PCILEECH_REQUEST_READ:
+            /* Dispatch the read-request immediately. */
             pci_leech_process_read_request(state);
             break;
         case PCILEECH_REQUEST_WRITE:
+            /* In this context, we don't have data right now. */
             /* Set to write-pending state */
             state->write_pending = true;
             state->written_length = 0;
