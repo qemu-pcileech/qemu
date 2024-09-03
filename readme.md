@@ -45,52 +45,26 @@ There are a few things to note:
 - QEMU PCILeech device will send a `LeechResponseHeader` for every transmitted 1024 bytes.
 
 Suppose you want to read 4100 bytes. The communication data flow would look like:
-```
-+-----------------------+
-| LeechRequestHeader	|
-+-----------------------+
-							---------------->
-												+-----------------------+
-												| LeechResponseHeader	|
-												+-----------------------+
-												| 1024 bytes of data	|
-												+-----------------------+
-												| LeechResponseHeader	|
-												+-----------------------+
-												| 1024 bytes of data	|
-												+-----------------------+
-												| LeechResponseHeader	|
-												+-----------------------+
-												| 1024 bytes of data	|
-												+-----------------------+
-												| LeechResponseHeader	|
-												+-----------------------+
-												| 1024 bytes of data	|
-												+-----------------------+
-												| LeechResponseHeader	|
-												+-----------------------+
-												| 4 bytes of data		|
-												+-----------------------+
-							<---------------
+```mermaid
+sequenceDiagram
+    PCILeech Software ->> QEMU PCILeech Device: Request 4100-byte read
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 4-byte data with header
 ```
 
 Suppose you want to write 2100 bytes. The communication data flow would look like:
-```
-+-----------------------+
-| LeechRequestHeader	|
-+-----------------------+
-+-----------------------+
-| 1024 bytes of data	|	--------------->	+-----------------------+
-+-----------------------+						| LeechResponseHeader	|
-							<---------------	+-----------------------+
-+-----------------------+
-| 1024 bytes of data	|	--------------->	+-----------------------+
-+-----------------------+						| LeechResponseHeader	|
-							<---------------	+-----------------------+
-+-----------------------+
-| 52 bytes of data		|	--------------->	+-----------------------+
-+-----------------------+						| LeechResponseHeader	|
-							<---------------	+-----------------------+
+```mermaid
+sequenceDiagram
+    PCILeech Software ->> QEMU PCILeech Device: Request 2100-byte write
+    PCILeech Software ->> QEMU PCILeech Device: Send 1024-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
+    PCILeech Software ->> QEMU PCILeech Device: Send 1024-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
+    PCILeech Software ->> QEMU PCILeech Device: Send 52-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
 ```
 
 ## Build
