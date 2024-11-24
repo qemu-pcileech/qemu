@@ -1,8 +1,8 @@
-# QEMU Fork for PCILeech 9.1.x
+# QEMU 9.1.x Fork for PCILeech
 QEMU is a generic and open source machine & userspace emulator and virtualizer. \
 This fork is intended for adding a virtual PCILeech device into the QEMU.
 
-This branch is currently based on QEMU 9.1.0.
+This branch is based on QEMU 9.1.x.
 
 ## PCILeech Device
 [PCILeech](https://github.com/ufrisk/pcileech) is a PCI hardware device that uses DMA to read and write target system memory. This project aims to implement PCILeech device inside a QEMU guest. \
@@ -83,7 +83,7 @@ sudo apt update -y
 ```
 Install prerequisites:
 ```
-sudo apt install -y git libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libbz2-dev liblzo2-dev ninja-build python3-pip meson ovmf libsdl2-dev libgtk-3-dev libvte-dev libspice-protocol-dev libspice-server-dev libslirp-dev libcapstone-dev python3-sphinx python3-sphinx-rtd-theme
+sudo apt install -y gcc libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libbz2-dev liblzo2-dev ninja-build python3-pip meson ovmf libsdl2-dev libgtk-3-dev libvte-dev libspice-protocol-dev libspice-server-dev libslirp-dev libcapstone-dev python3-sphinx python3-sphinx-rtd-theme flex bison
 ```
 Configure compilation arguments:
 ```
@@ -97,6 +97,25 @@ Install into the system:
 ```
 sudo make install
 ```
+
+### Linux (Fedora 41)
+Install prerequisites:
+```
+sudo dnf install -y gcc glib2-devel libfdt-devel pixman-devel zlib-devel lzo-devel ninja-build python3-pip meson edk2-ovmf SDL2-devel gtk3-devel vte-devel spice-server-devel spice-protocol libslirp-devel capstone-devel python3-sphinx flex bison
+```
+Configure compilation arguments:
+```
+./configure --disable-werror --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
+```
+Build QEMU:
+```
+make -j$(nproc)
+```
+Install into the system:
+```
+sudo make install
+```
+Restart the shell.
 
 ### Windows
 Install [MSYS2](https://www.msys2.org/).
@@ -117,6 +136,16 @@ Configure compilation arguments:
 Build QEMU:
 ```
 make -j$(nproc)
+```
+
+### Check Your Version
+You may want to check if your version is correct:
+```
+qemu-system-x86_64 --version
+```
+It should show:
+```
+QEMU emulator version 9.1.2 (v9.1.2-pcileech)
 ```
 
 ## Run
