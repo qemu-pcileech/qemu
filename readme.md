@@ -1,0 +1,172 @@
+# QEMU 9.2.x Fork for PCILeech
+QEMU is a generic and open source machine & userspace emulator and virtualizer. \
+This fork is intended for adding a virtual PCILeech device into the QEMU.
+
+This branch is based on QEMU 9.2.x.
+
+## PCILeech Device
+[PCILeech](https://github.com/ufrisk/pcileech) is a PCI hardware device that uses DMA to read and write target system memory. This project aims to implement PCILeech device inside a QEMU guest. \
+This will enable security researchers to practice DMA attacking and defending.
+
+### Protocol
+There are two operations in this device: either read or write.
+
+```C
+#define PCILEECH_REQUEST_READ   0
+#define PCILEECH_REQUEST_WRITE  1
+
+struct LeechRequestHeader {
+    uint8_t command;    /* 0 - Read, 1 - Write */
+    uint8_t reserved[7];
+    /* Little-Endian */
+    uint64_t address;
+    uint64_t length;
+};
+
+#define LEECH_RESULT_OK     0
+#define LEECH_DEVICE_ERROR  (1U << 0)
+#define LEECH_DECODE_ERROR  (1U << 1)
+#define LEECH_ACCESS_ERROR  (1U << 2)
+
+struct LeechResponseHeader {
+    /* Little-Endian */
+    uint32_t result;
+    uint8_t reserved[4];
+    uint64_t length;    /* Indicates length of data followed by header */
+};
+```
+
+There are a few things to note:
+
+- PCILeech software will send a `LeechRequestHeader` to operate the QEMU PCILeech device.
+- The QEMU PCILeech device will perform DMA.
+	- If read, QEMU PCILeech device will use DMA to read from memory.
+	- If write, QEMU PCILeech device will use DMA to write to memory.
+- QEMU PCILeech device will send a `LeechResponseHeader` for every transmitted 1024 bytes.
+
+Suppose you want to read 4100 bytes. The communication data flow would look like:
+```mermaid
+sequenceDiagram
+    PCILeech Software ->> QEMU PCILeech Device: Request 4100-byte read
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 1024-byte data with header
+    QEMU PCILeech Device ->> PCILeech Software: Respond 4-byte data with header
+```
+
+Suppose you want to write 2100 bytes. The communication data flow would look like:
+```mermaid
+sequenceDiagram
+    PCILeech Software ->> QEMU PCILeech Device: Request 2100-byte write
+    PCILeech Software ->> QEMU PCILeech Device: Send 1024-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
+    PCILeech Software ->> QEMU PCILeech Device: Send 1024-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
+    PCILeech Software ->> QEMU PCILeech Device: Send 52-byte data
+    QEMU PCILeech Device ->> PCILeech Software: Respond with a header
+```
+
+## Build
+This chapter contains detailed information for building QEMU on all platforms.
+
+You will need to clone QEMU repository regardless of your platform:
+```
+git clone https://github.com/qemu-pcileech/qemu.git
+cd qemu
+```
+
+### Linux (Ubuntu LTS 24.04)
+Update `apt` repository.
+```
+sudo apt update -y
+```
+Install prerequisites:
+```
+sudo apt install -y gcc libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libbz2-dev liblzo2-dev ninja-build python3-pip meson ovmf libsdl2-dev libgtk-3-dev libvte-dev libspice-protocol-dev libspice-server-dev libslirp-dev libcapstone-dev python3-sphinx python3-sphinx-rtd-theme flex bison
+```
+Configure compilation arguments:
+```
+./configure --disable-werror --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
+```
+Build QEMU:
+```
+make -j$(nproc)
+```
+Install into the system:
+```
+sudo make install
+```
+
+### Linux (Fedora 41)
+Install prerequisites:
+```
+sudo dnf install -y gcc glib2-devel libfdt-devel pixman-devel zlib-devel lzo-devel ninja-build python3-pip meson edk2-ovmf SDL2-devel gtk3-devel vte-devel spice-server-devel spice-protocol libslirp-devel capstone-devel python3-sphinx flex bison
+```
+Configure compilation arguments:
+```
+./configure --disable-werror --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
+```
+Build QEMU:
+```
+make -j$(nproc)
+```
+Install into the system:
+```
+sudo make install
+```
+Restart the shell.
+
+### Windows
+Install [MSYS2](https://www.msys2.org/).
+
+Update MSYS2 repository:
+```
+pacman -Syu
+pacman -Su
+```
+Install prerequisites:
+```
+pacman -S base-devel mingw-w64-x86_64-toolchain git python ninja mingw-w64-x86_64-glib2 mingw-w64-x86_64-pixman python-setuptools mingw-w64-x86_64-gtk3 mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libslirp mingw-w64-x86_64-libcapstone
+```
+Configure compilation arguments:
+```
+./configure --disable-werror --enable-whpx --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-slirp --enable-capstone
+```
+Build QEMU:
+```
+make -j$(nproc)
+```
+
+### Check Your Version
+You may want to check if your version is correct:
+```
+qemu-system-x86_64 --version
+```
+It should show:
+```
+QEMU emulator version 9.2.0 (v9.2.0-pcileech)
+```
+
+## Run
+The virtual PCILeech device relies on QEMU chardev backend. Thus, you have to create a chardev for PCILeech device.
+```
+qemu-system-x86_64 -device pcileech,chardev=pcileech -chardev socket,id=pcileech,wait=off,server=on,host=0.0.0.0,port=6789
+```
+Append more arguments (e.g.: `-accel kvm`) to fit your VM settings.
+
+Then the virtual PCILeech device will be listening on 0.0.0.0:6789. Use [PCILeech software](https://github.com/ufrisk/pcileech/releases) with [QEMU-PCILeech plugin](https://github.com/ufrisk/LeechCore/releases):
+```
+pcileech -device qemupcileech://127.0.0.1:6789 display -min 0x3800000
+```
+Make sure you have placed the `leechcore_device_qemupcileech.[so|dll]` file alongside `leechcore.[dll|so]` before you run `pcileech`!
+
+## Modify Device Identifier
+This device will show itself as Xilinx Ethernet Adapter with Device ID 0x0666. \
+Go to `pci_leech_class_init` function then modify the vendor & device ID.
+
+## Maintenance Schedule
+This fork will only update when a new stable version of QEMU is released or if a new feature is added. The release-candidate (-rc) versions are ignored.
+
+## License
+See [LICENSE](./LICENSE) file.
