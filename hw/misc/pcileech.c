@@ -110,10 +110,6 @@ static void pci_leech_process_write_request(PciLeechState *state,
     struct LeechResponseHeader response = { 0 };
     /* Write memory via DMA. */
     MemTxResult result = pci_dma_write(&state->device, address, buf, size);
-    if (result != MEMTX_OK) {
-        printf("PCILeech: Address 0x%016lX Write Error! MemTxResult: 0x%X\n",
-                                    address, result);
-    }
     /* Send a response. */
     response.result = cpu_to_le32(pci_leech_convert_result(result));
     response.length = 0;
@@ -139,10 +135,6 @@ static void pci_leech_process_read_request(PciLeechState *state)
         /* Read memory via DMA. */
         MemTxResult result = pci_dma_read(&state->device, request->address + i,
                                                             buff, readlen);
-        if (result != MEMTX_OK) {
-            printf("PCILeech: Address 0x%016lX Read Error! MemTxResult: 0x%X\n",
-                    request->address + i, result);
-        }
         /* Flip byte-order to little-endian. */
         response.result = cpu_to_le32(pci_leech_convert_result(result));
         response.length = cpu_to_le64(readlen);

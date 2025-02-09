@@ -87,7 +87,7 @@ sudo apt install -y gcc libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev lib
 ```
 Configure compilation arguments:
 ```
-./configure --disable-werror --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
+./configure --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
 ```
 Build QEMU:
 ```
@@ -105,7 +105,7 @@ sudo dnf install -y gcc glib2-devel libfdt-devel pixman-devel zlib-devel lzo-dev
 ```
 Configure compilation arguments:
 ```
-./configure --disable-werror --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
+./configure --enable-kvm --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-spice --enable-slirp --enable-capstone
 ```
 Build QEMU:
 ```
@@ -131,7 +131,7 @@ pacman -S base-devel mingw-w64-x86_64-toolchain git python ninja mingw-w64-x86_6
 ```
 Configure compilation arguments:
 ```
-./configure --disable-werror --enable-whpx --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-slirp --enable-capstone
+./configure --enable-whpx --enable-tools --enable-lzo --enable-bzip2 --enable-sdl --enable-gtk --enable-vdi --enable-qcow1 --enable-slirp --enable-capstone
 ```
 Build QEMU:
 ```
@@ -145,7 +145,7 @@ qemu-system-x86_64 --version
 ```
 It should show:
 ```
-QEMU emulator version 9.2.0 (v9.2.0-pcileech)
+QEMU emulator version 9.2.1 (v9.2.1-pcileech)
 ```
 
 ## Run
