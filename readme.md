@@ -145,7 +145,7 @@ qemu-system-x86_64 --version
 ```
 It should show:
 ```
-QEMU emulator version 9.2.3 (v9.2.3-pcileech)
+QEMU emulator version 9.2.4 (v9.2.4-pcileech)
 ```
 
 ## Run
