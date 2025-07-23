@@ -208,7 +208,7 @@ static void pci_leech_realize(PCIDevice *pdev, Error **errp)
                             NULL, NULL, state, NULL, true);
 }
 
-static Property leech_properties[] = {
+static const Property leech_properties[] = {
     DEFINE_PROP_CHR("chardev", PciLeechState, chardev),
 };
 

@@ -143,9 +143,9 @@ You may want to check if your version contains PCILeech device:
 ```
 qemu-system-x86_64 --version
 ```
-It should show `-pcileech` suffix in the parenthesis. For 10.0.2 version as an example:
+It should show `-pcileech` suffix in the parenthesis. For 10.0.3 version as an example:
 ```
-QEMU emulator version 10.0.2 (v10.0.2-pcileech)
+QEMU emulator version 10.0.3 (v10.0.3-pcileech)
 Copyright (c) 2003-2025 Fabrice Bellard and the QEMU Project developers
 ```
 
