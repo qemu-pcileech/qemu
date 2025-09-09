@@ -6835,11 +6835,21 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         }
         *edx = env->features[FEAT_1_EDX];
         if (threads_per_pkg > 1) {
+            uint32_t num;
+
+            /*
+             * For CPUID.01H.EBX[Bits 23-16], AMD requires logical processor
+             * count, but Intel needs maximum number of addressable IDs for
+             * logical processors per package.
+             */
+            if ((IS_INTEL_CPU(env) || IS_ZHAOXIN_CPU(env))) {
+                num = 1 << apicid_pkg_offset(topo_info);
+            } else {
+                num = threads_per_pkg;
+            }
+
             /* Fixup overflow: max value for bits 23-16 is 255. */
-            *ebx |= MIN(threads_per_pkg, 255) << 16;
-        }
-        if (!cpu->enable_pmu) {
-            *ecx &= ~CPUID_EXT_PDCM;
+            *ebx |= MIN(num, 255) << 16;
         }
         break;
     case 2:
@@ -7828,6 +7838,10 @@ void x86_cpu_expand_features(X86CPU *cpu, Error **errp)
         if (!IS_INTEL_CPU(env) && !IS_ZHAOXIN_CPU(env)) {
             env->features[FEAT_8000_0001_ECX] |= CPUID_EXT3_CMP_LEG;
         }
+    }
+
+    if (!cpu->enable_pmu) {
+        env->features[FEAT_1_ECX] &= ~CPUID_EXT_PDCM;
     }
 
     for (i = 0; i < ARRAY_SIZE(feature_dependencies); i++) {
