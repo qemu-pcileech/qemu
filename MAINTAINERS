@@ -2098,6 +2098,11 @@ F: docs/pci*
 F: docs/specs/*pci*
 F: docs/system/sriov.rst
 
+PCILeech
+M: Zero Tang <zero.tangptr@gmail.com>
+S: Supported
+F: hw/misc/pcileech.c
+
 PCIE DOE
 M: Huai-Cheng Kuo <hchkuo@avery-design.com.tw>
 M: Chris Browy <cbrowy@avery-design.com>
