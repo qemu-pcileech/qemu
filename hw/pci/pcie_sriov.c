@@ -112,6 +112,9 @@ bool pcie_sriov_pf_init(PCIDevice *dev, uint16_t offset,
 void pcie_sriov_pf_exit(PCIDevice *dev)
 {
     uint8_t *cfg = dev->config + dev->exp.sriov_cap;
+    if (dev->exp.sriov_cap == 0) {
+        return;
+    }
 
     unparent_vfs(dev, pci_get_word(cfg + PCI_SRIOV_TOTAL_VF));
 }
@@ -141,42 +144,6 @@ void pcie_sriov_pf_init_vf_bar(PCIDevice *dev, int region_num,
         pci_set_long(dev->cmask + addr, 0xffffffff);
     }
     dev->exp.sriov_pf.vf_bar_type[region_num] = type;
-}
-
-void pcie_sriov_vf_register_bar(PCIDevice *dev, int region_num,
-                                MemoryRegion *memory)
-{
-    PCIIORegion *r;
-    PCIBus *bus = pci_get_bus(dev);
-    uint8_t type;
-    pcibus_t size = memory_region_size(memory);
-
-    assert(pci_is_vf(dev)); /* PFs must use pci_register_bar */
-    assert(region_num >= 0);
-    assert(region_num < PCI_NUM_REGIONS);
-    type = dev->exp.sriov_vf.pf->exp.sriov_pf.vf_bar_type[region_num];
-
-    if (!is_power_of_2(size)) {
-        error_report("%s: PCI region size must be a power"
-                     " of two - type=0x%x, size=0x%"FMT_PCIBUS,
-                     __func__, type, size);
-        exit(1);
-    }
-
-    r = &dev->io_regions[region_num];
-    r->memory = memory;
-    r->address_space =
-        type & PCI_BASE_ADDRESS_SPACE_IO
-        ? bus->address_space_io
-        : bus->address_space_mem;
-    r->size = size;
-    r->type = type;
-
-    r->addr = pci_bar_address(dev, region_num, r->type, r->size);
-    if (r->addr != PCI_BAR_UNMAPPED) {
-        memory_region_add_subregion_overlap(r->address_space,
-                                            r->addr, r->memory, 1);
-    }
 }
 
 static void register_vfs(PCIDevice *dev)
