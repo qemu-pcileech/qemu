@@ -75,7 +75,7 @@ struct PciLeechState {
     uint64_t written_length;
     int pos;
     /* Communication */
-    CharBackend chardev;
+    CharFrontend chardev;
 };
 
 typedef struct LeechRequestHeader LeechRequestHeader;
