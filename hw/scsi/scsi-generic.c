@@ -439,7 +439,7 @@ static bool scsi_generic_pr_register(SCSIDevice *s, uint64_t key, Error **errp)
     ret = scsi_SG_IO(s->conf.blk, SG_DXFER_TO_DEV, cmd, sizeof(cmd),
                      buf, sizeof(buf), s->io_timeout, errp);
     if (ret < 0) {
-        error_prepend(errp, "PERSISTENT RESERVE OUT with REGISTER");
+        error_prepend(errp, "PERSISTENT RESERVE OUT with REGISTER: ");
         return false;
     }
     return true;
@@ -453,6 +453,16 @@ static bool scsi_generic_pr_preempt(SCSIDevice *s, uint64_t key,
     uint64_t key_be = cpu_to_be64(key);
     int ret;
 
+    /*
+     * The LIO iSCSI target in Linux up to at least version 7.0 rejects PREEMPT
+     * commands with a zero TYPE field although the SPC-6 specification says
+     * the field should be ignored when there is no persistent reservation.
+     * Work around this by choosing an arbitrary valid PR type value.
+     */
+    if (resv_type == 0) {
+        resv_type = PR_TYPE_WRITE_EXCLUSIVE;
+    }
+
     cmd[0] = PERSISTENT_RESERVE_OUT;
     cmd[1] = PRO_PREEMPT;
     cmd[2] = resv_type & 0xf;
@@ -463,7 +473,7 @@ static bool scsi_generic_pr_preempt(SCSIDevice *s, uint64_t key,
     ret = scsi_SG_IO(s->conf.blk, SG_DXFER_TO_DEV, cmd, sizeof(cmd),
                      buf, sizeof(buf), s->io_timeout, errp);
     if (ret < 0) {
-        error_prepend(errp, "PERSISTENT RESERVE OUT with PREEMPT");
+        error_prepend(errp, "PERSISTENT RESERVE OUT with PREEMPT: ");
         return false;
     }
     return true;
@@ -502,6 +512,16 @@ bool scsi_generic_pr_state_preempt(SCSIDevice *s, Error **errp)
          */
         if (!scsi_generic_pr_preempt(s, key, resv_type, errp)) {
             return false;
+        }
+
+        /*
+         * Some SCSI targets, like the Linux LIO target, remove our
+         * registration when preempting without a reservation (resv_type is 0).
+         * Try to register again but ignore the error since a RESERVATION
+         * CONFLICT is expected if our registration remained in place.
+         */
+        if (resv_type == 0) {
+            scsi_generic_pr_register(s, key, NULL);
         }
     }
     return true;

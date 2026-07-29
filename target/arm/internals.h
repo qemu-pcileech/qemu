@@ -1943,4 +1943,15 @@ int compare_u64(const void *a, const void *b);
 /* Used in FEAT_MEC to set the MECIDWidthm1 field in the MECIDR_EL2 register. */
 #define MECID_WIDTH 16
 
+/**
+ * arm_set_cpu_power_state() - set power state synced with halt_reason
+ */
+static inline void arm_set_cpu_power_state(ARMCPU *cpu, ARMPSCIState state)
+{
+    CPUARMState *env = &cpu->env;
+
+    cpu->power_state = state;
+    env->halt_reason = state == PSCI_OFF ? HALT_PSCI : NOT_HALTED;
+}
+
 #endif

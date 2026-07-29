@@ -4471,6 +4471,7 @@ foreach target : target_dirs
       emulators += {exe['name'] : custom_target(exe['name'],
                    input: build_input,
                    output: exe['name'],
+                   build_by_default: true,
                    command: [entitlement, '@OUTPUT@', '@INPUT@'])
       }
 
