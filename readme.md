@@ -76,14 +76,14 @@ git clone https://github.com/qemu-pcileech/qemu.git
 cd qemu
 ```
 
-### Linux (Ubuntu LTS 24.04)
+### Linux (Ubuntu LTS 26.04)
 Update `apt` repository.
 ```
 sudo apt update -y
 ```
 Install prerequisites:
 ```
-sudo apt install -y gcc libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libbz2-dev liblzo2-dev ninja-build python3-pip meson ovmf libsdl2-dev libgtk-3-dev libvte-dev libspice-protocol-dev libspice-server-dev libslirp-dev libcapstone-dev python3-sphinx python3-sphinx-rtd-theme flex bison
+sudo apt install -y gcc libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libbz2-dev liblzo2-dev ninja-build python3-pip meson ovmf libsdl2-dev libgtk-3-dev libspice-protocol-dev libspice-server-dev libslirp-dev libcapstone-dev python3-sphinx python3-sphinx-rtd-theme flex bison
 ```
 Configure compilation arguments:
 ```
@@ -127,7 +127,7 @@ pacman -Su
 ```
 Install prerequisites:
 ```
-pacman -S base-devel mingw-w64-x86_64-toolchain git python ninja mingw-w64-x86_64-glib2 mingw-w64-x86_64-pixman python-setuptools mingw-w64-x86_64-gtk3 mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libslirp mingw-w64-x86_64-libcapstone
+pacman -S base-devel mingw-w64-x86_64-toolchain git python ninja mingw-w64-x86_64-glib2 python-setuptools mingw-w64-x86_64-gtk3 mingw-w64-x86_64-SDL2 mingw-w64-x86_64-libslirp mingw-w64-x86_64-libcapstone
 ```
 Configure compilation arguments:
 ```
