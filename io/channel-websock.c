@@ -230,7 +230,7 @@ qio_channel_websock_extract_headers(QIOChannelWebsock *ioc,
     tmp = strchr(buffer, ' ');
     if (!tmp) {
         error_setg(errp, "Missing HTTP path delimiter");
-        return 0;
+        goto bad_request;
     }
     *tmp = '\0';
 
@@ -492,6 +492,9 @@ static int qio_channel_websock_handshake_read(QIOChannelWebsock *ioc,
     buffer_reserve(&ioc->encinput, want);
     ret = qio_channel_read(ioc->master,
                            (char *)buffer_end(&ioc->encinput), want, errp);
+    if (ret == QIO_CHANNEL_ERR_BLOCK) {
+        return 0;
+    }
     if (ret < 0) {
         return -1;
     }
@@ -561,6 +564,11 @@ static gboolean qio_channel_websock_handshake_send(QIOChannel *ioc,
                             (char *)wioc->encoutput.buffer,
                             wioc->encoutput.offset,
                             &err);
+
+    if (ret == QIO_CHANNEL_ERR_BLOCK) {
+        /* Socket buffer is full, the G_IO_OUT watch stays armed */
+        return TRUE;
+    }
 
     if (ret < 0) {
         trace_qio_channel_websock_handshake_fail(ioc, error_get_pretty(err));
